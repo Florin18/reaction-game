@@ -201,8 +201,10 @@
         color: var(--text);
         background: transparent;
         cursor: pointer;
-        display: grid;
-        place-items: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         text-align: center;
         transition: transform var(--t) ease, box-shadow var(--t) ease;
         outline: none;
@@ -311,7 +313,9 @@
       .arenaInner {
         display: grid;
         gap: 12px;
-        max-width: 620px;
+        max-width: 480px;
+        position: relative;
+        z-index: 4;
       }
 
       .headline {
@@ -427,6 +431,42 @@
         letter-spacing: -0.01em;
       }
 
+      .categories {
+        display: grid;
+        gap: 8px;
+      }
+
+      .categories h3 {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .categoryItem {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(15, 23, 42, 0.35);
+        display: grid;
+        gap: 4px;
+      }
+
+      .categoryName {
+        color: var(--text);
+        font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: -0.01em;
+      }
+
+      .categoryRange {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
       .attempts {
         display: grid;
         gap: 8px;
@@ -517,10 +557,143 @@
         white-space: nowrap !important;
         border: 0 !important;
       }
+
+      /* How to Play Modal */
+      .howToPlayOverlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        display: none;
+        place-items: center;
+        z-index: 1000;
+        padding: 20px;
+      }
+
+      .howToPlayOverlay.active {
+        display: grid;
+      }
+
+      .howToPlayModal {
+        background: var(--surface);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        max-width: 600px;
+        padding: 32px;
+        display: grid;
+        gap: 16px;
+        backdrop-filter: blur(10px);
+      }
+
+      .howToPlayModal h2 {
+        margin: 0;
+        font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+        color: var(--accent);
+      }
+
+      .howToPlayModal p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .howToPlayModal ul {
+        margin: 0;
+        padding-left: 20px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .howToPlayModal li {
+        margin-bottom: 8px;
+      }
+
+      .howToPlayClose {
+        appearance: none;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        background: rgba(34, 197, 94, 0.12);
+        border-color: rgba(34, 197, 94, 0.28);
+        color: var(--accent);
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform var(--t-fast) ease, background var(--t-fast) ease;
+        outline: none;
+      }
+
+      .howToPlayClose:hover {
+        transform: translateY(-2px);
+        background: rgba(34, 197, 94, 0.18);
+      }
+
+      .howToPlayClose:focus-visible {
+        box-shadow: var(--ring);
+      }
+
+      .categoryBadge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-left: 8px;
+      }
+
+      .categoryBadge.amazing {
+        background: rgba(34, 197, 94, 0.15);
+        color: rgba(34, 197, 94, 1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+
+      .categoryBadge.veryGood {
+        background: rgba(34, 197, 94, 0.12);
+        color: rgba(34, 197, 94, 0.9);
+        border: 1px solid rgba(34, 197, 94, 0.25);
+      }
+
+      .categoryBadge.good {
+        background: rgba(59, 130, 246, 0.12);
+        color: rgba(59, 130, 246, 0.9);
+        border: 1px solid rgba(59, 130, 246, 0.25);
+      }
+
+      .categoryBadge.average {
+        background: rgba(248, 113, 113, 0.12);
+        color: rgba(248, 113, 113, 0.9);
+        border: 1px solid rgba(248, 113, 113, 0.25);
+      }
+
+      .categoryBadge.belowAverage {
+        background: rgba(239, 68, 68, 0.12);
+        color: rgba(239, 68, 68, 0.9);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+      }
     </style>
   </head>
 
   <body>
+    <div class="howToPlayOverlay" id="howToPlayOverlay">
+      <div class="howToPlayModal">
+        <h2>How to Play</h2>
+        <p>Test your reaction time in this exciting game!</p>
+        <ul>
+          <li>Click the green panel when it lights up</li>
+          <li>React as fast as you can</li>
+          <li>Don't click before it turns green (false start)</li>
+          <li>Your time is measured in milliseconds</li>
+        </ul>
+        <button class="howToPlayClose" id="closeHowToPlay">Got it!</button>
+      </div>
+    </div>
+
     <div class="ui">
       <div class="wrap">
         <header class="header">
@@ -593,13 +766,43 @@
             <ul class="list" aria-label="Current result details">
               <li>
                 <span class="label">Current</span>
-                <span class="value" id="currentValue">—</span>
+                <div>
+                  <span class="value" id="currentValue">—</span>
+                  <span class="categoryBadge" id="currentCategory"></span>
+                </div>
               </li>
               <li>
                 <span class="label">Last</span>
-                <span class="value" id="lastValue">—</span>
+                <div>
+                  <span class="value" id="lastValue">—</span>
+                  <span class="categoryBadge" id="lastCategory"></span>
+                </div>
               </li>
             </ul>
+
+            <div class="categories">
+              <h3>Reaction Time Scale</h3>
+              <div class="categoryItem">
+                <div class="categoryName">Amazing</div>
+                <div class="categoryRange">&lt; 150 ms</div>
+              </div>
+              <div class="categoryItem">
+                <div class="categoryName">Very Good</div>
+                <div class="categoryRange">150 - 200 ms</div>
+              </div>
+              <div class="categoryItem">
+                <div class="categoryName">Good</div>
+                <div class="categoryRange">200 - 250 ms</div>
+              </div>
+              <div class="categoryItem">
+                <div class="categoryName">Average</div>
+                <div class="categoryRange">250 - 350 ms</div>
+              </div>
+              <div class="categoryItem">
+                <div class="categoryName">Below Average</div>
+                <div class="categoryRange">&gt; 350 ms</div>
+              </div>
+            </div>
           </aside>
         </section>
       </div>
@@ -627,6 +830,15 @@
         const formatMs = (ms) => {
           if (!Number.isFinite(ms)) return "—";
           return `${Math.round(Math.max(0, ms))} ms`;
+        };
+
+        const getCategoryBadge = (ms) => {
+          if (!Number.isFinite(ms) || ms <= 0) return { class: "", text: "" };
+          if (ms < 150) return { class: "amazing", text: "Amazing" };
+          if (ms < 200) return { class: "veryGood", text: "Very Good" };
+          if (ms < 250) return { class: "good", text: "Good" };
+          if (ms < 350) return { class: "average", text: "Average" };
+          return { class: "belowAverage", text: "Below Average" };
         };
 
         const avg = (arr) => {
@@ -693,7 +905,9 @@
             bestValue: document.getElementById("bestValue"),
             avgValue: document.getElementById("avgValue"),
             currentValue: document.getElementById("currentValue"),
+            currentCategory: document.getElementById("currentCategory"),
             lastValue: document.getElementById("lastValue"),
+            lastCategory: document.getElementById("lastCategory"),
             attemptsGrid: document.getElementById("attemptsGrid"),
             sessionCount: document.getElementById("sessionCount"),
             live: document.getElementById("live"),
@@ -748,7 +962,23 @@
             el.bestValue.textContent = formatMs(bestMs);
             el.avgValue.textContent = formatMs(avgMs);
             el.currentValue.textContent = formatMs(currentMs);
+            const currentCat = getCategoryBadge(currentMs);
+            if (currentCat.text) {
+              el.currentCategory.textContent = currentCat.text;
+              el.currentCategory.className = `categoryBadge ${currentCat.class}`;
+            } else {
+              el.currentCategory.textContent = "";
+              el.currentCategory.className = "categoryBadge";
+            }
             el.lastValue.textContent = formatMs(lastMs);
+            const lastCat = getCategoryBadge(lastMs);
+            if (lastCat.text) {
+              el.lastCategory.textContent = lastCat.text;
+              el.lastCategory.className = `categoryBadge ${lastCat.class}`;
+            } else {
+              el.lastCategory.textContent = "";
+              el.lastCategory.className = "categoryBadge";
+            }
             el.sessionCount.textContent = `Session: ${sessionCount}`;
           };
 
@@ -1198,11 +1428,72 @@
           return Object.freeze({ init });
         })();
 
+        const HowToPlay = (() => {
+          const STORAGE_KEY_SHOWN = "rtg_how_to_play_shown_v1";
+
+          const hasShown = () => {
+            try {
+              return localStorage.getItem(STORAGE_KEY_SHOWN) === "true";
+            } catch {
+              return false;
+            }
+          };
+
+          const markShown = () => {
+            try {
+              localStorage.setItem(STORAGE_KEY_SHOWN, "true");
+            } catch {}
+          };
+
+          const show = () => {
+            const overlay = document.getElementById("howToPlayOverlay");
+            if (overlay) {
+              overlay.classList.add("active");
+            }
+          };
+
+          const hide = () => {
+            const overlay = document.getElementById("howToPlayOverlay");
+            if (overlay) {
+              overlay.classList.remove("active");
+            }
+            markShown();
+          };
+
+          const init = () => {
+            if (hasShown()) {
+              const overlay = document.getElementById("howToPlayOverlay");
+              if (overlay) {
+                overlay.style.display = "none";
+              }
+            } else {
+              show();
+            }
+
+            const closeBtn = document.getElementById("closeHowToPlay");
+            if (closeBtn) {
+              closeBtn.addEventListener("click", hide);
+            }
+
+            const overlay = document.getElementById("howToPlayOverlay");
+            if (overlay) {
+              overlay.addEventListener("click", (e) => {
+                if (e.target === overlay) {
+                  hide();
+                }
+              });
+            }
+          };
+
+          return Object.freeze({ init, show, hide });
+        })();
+
         const boot = () => {
           try {
             Visuals3D.init();
           } catch {}
 
+          HowToPlay.init();
           Game.init();
         };
 
