@@ -1,0 +1,1377 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Reaction Timer — Portfolio Grade</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        /* Design tokens */
+        --bg: #0f172a;
+        --surface: #1e293b;
+        --accent: #22c55e;
+        --error: #ef4444;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+
+        --radius: 16px;
+        --radius-sm: 12px;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        --shadow-soft: 0 10px 20px rgba(0, 0, 0, 0.25);
+
+        --ring: 0 0 0 3px rgba(34, 197, 94, 0.35);
+        --ring-error: 0 0 0 3px rgba(239, 68, 68, 0.35);
+
+        --t-fast: 150ms;
+        --t: 180ms;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        color: var(--text);
+        background: radial-gradient(1200px 900px at 20% 10%, rgba(34, 197, 94, 0.08), transparent 60%),
+          radial-gradient(900px 700px at 80% 30%, rgba(59, 130, 246, 0.08), transparent 60%),
+          radial-gradient(900px 700px at 50% 90%, rgba(236, 72, 153, 0.06), transparent 60%),
+          var(--bg);
+        overflow-x: hidden;
+      }
+
+      /* Three.js canvas layer */
+      #bg3d {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        pointer-events: none; /* must never capture clicks */
+        opacity: 0.95;
+      }
+
+      /* UI layer */
+      .ui {
+        position: relative;
+        z-index: 1;
+        min-height: 100%;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+      }
+
+      .wrap {
+        width: 100%;
+        max-width: 980px;
+        display: grid;
+        gap: 16px;
+      }
+
+      .header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 4px 2px;
+      }
+
+      .brand {
+        display: grid;
+        gap: 6px;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+        font-size: clamp(22px, 2.2vw, 30px);
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+      }
+
+      .brand p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      .hint {
+        display: none;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: right;
+      }
+
+      @media (min-width: 720px) {
+        .hint {
+          display: block;
+        }
+      }
+
+      .card {
+        background: rgba(30, 41, 59, 0.78);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+        overflow: hidden;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      @media (min-width: 960px) {
+        .grid {
+          grid-template-columns: 1.25fr 0.75fr;
+          align-items: start;
+        }
+      }
+
+      .game {
+        padding: 18px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .arena {
+        position: relative;
+        border-radius: calc(var(--radius) - 4px);
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.6), rgba(15, 23, 42, 0.35));
+        box-shadow: var(--shadow-soft);
+      }
+
+      .arenaButton {
+        appearance: none;
+        border: none;
+        width: 100%;
+        min-height: 220px;
+        padding: 18px;
+        border-radius: calc(var(--radius) - 4px);
+        color: var(--text);
+        background: transparent;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        transition: transform var(--t) ease, box-shadow var(--t) ease, background var(--t) ease;
+        outline: none;
+      }
+
+      @media (min-width: 720px) {
+        .arenaButton {
+          min-height: 260px;
+        }
+      }
+
+      .arenaButton:focus-visible {
+        box-shadow: var(--ring);
+      }
+
+      .arenaButton[data-state="too_early"]:focus-visible {
+        box-shadow: var(--ring-error);
+      }
+
+      .arenaButton:active {
+        transform: scale(0.995);
+      }
+
+      .statePillRow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        color: var(--muted);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(15, 23, 42, 0.35);
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.65);
+        box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.12);
+      }
+
+      .pill[data-variant="ready"] .dot {
+        background: var(--accent);
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.16);
+      }
+
+      .pill[data-variant="error"] .dot {
+        background: var(--error);
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.16);
+      }
+
+      .pill strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .actions {
+        display: inline-flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        appearance: none;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        background: rgba(15, 23, 42, 0.35);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: transform var(--t-fast) ease, background var(--t-fast) ease, border-color var(--t-fast) ease;
+        outline: none;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(148, 163, 184, 0.24);
+        background: rgba(15, 23, 42, 0.5);
+      }
+
+      .btn:focus-visible {
+        box-shadow: var(--ring);
+      }
+
+      .btn.danger:focus-visible {
+        box-shadow: var(--ring-error);
+      }
+
+      .btn.danger:hover {
+        border-color: rgba(239, 68, 68, 0.35);
+      }
+
+      .arenaInner {
+        display: grid;
+        gap: 12px;
+        max-width: 620px;
+      }
+
+      .headline {
+        font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+        margin: 0;
+        font-size: clamp(18px, 2.2vw, 22px);
+        letter-spacing: -0.01em;
+      }
+
+      .sub {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .big {
+        margin: 0;
+        font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        font-size: clamp(56px, 7vw, 80px);
+        line-height: 1.02;
+      }
+
+      .big[data-tone="accent"] {
+        color: var(--accent);
+        text-shadow: 0 0 18px rgba(34, 197, 94, 0.22);
+      }
+
+      .big[data-tone="error"] {
+        color: var(--error);
+        text-shadow: 0 0 18px rgba(239, 68, 68, 0.22);
+      }
+
+      .metaRow {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      @media (min-width: 720px) {
+        .metaRow {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .statCard {
+        padding: 14px;
+        border-radius: var(--radius-sm);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(15, 23, 42, 0.35);
+        display: grid;
+        gap: 6px;
+        min-height: 78px;
+      }
+
+      .statCard .k {
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      .statCard .v {
+        font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .sidebar {
+        padding: 18px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .sidebar h2 {
+        margin: 0;
+        font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+        font-size: 18px;
+        letter-spacing: -0.01em;
+      }
+
+      .list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+
+      .list li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(15, 23, 42, 0.35);
+      }
+
+      .list .label {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .list .value {
+        font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .attempts {
+        display: grid;
+        gap: 8px;
+      }
+
+      .attemptsHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .attemptsHeader .muted {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .attemptsGrid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+      }
+
+      .chip {
+        padding: 10px 8px;
+        border-radius: 12px;
+        text-align: center;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(15, 23, 42, 0.35);
+        font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        font-size: 14px;
+        min-height: 40px;
+        display: grid;
+        place-items: center;
+      }
+
+      .chip.empty {
+        color: rgba(148, 163, 184, 0.55);
+        font-weight: 600;
+        font-family: Inter, system-ui, sans-serif;
+      }
+
+      .devnotes {
+        padding: 18px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.65;
+      }
+
+      .devnotes h3 {
+        margin: 0 0 8px 0;
+        color: var(--text);
+        font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+        font-size: 16px;
+        letter-spacing: -0.01em;
+      }
+
+      .devnotes ul {
+        margin: 8px 0 0 18px;
+        padding: 0;
+      }
+
+      /* State-driven arena visuals */
+      .arena[data-state="idle"] {
+        box-shadow: var(--shadow-soft);
+      }
+
+      .arena[data-state="waiting"] {
+        box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.12), 0 14px 34px rgba(0, 0, 0, 0.35);
+      }
+
+      .arena[data-state="ready"] {
+        box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.28), 0 18px 40px rgba(0, 0, 0, 0.45);
+      }
+
+      .arena[data-state="too_early"] {
+        box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.28), 0 18px 40px rgba(0, 0, 0, 0.45);
+        animation: shake 260ms ease-in-out 0ms 1;
+      }
+
+      @keyframes shake {
+        0% {
+          transform: translateX(0);
+        }
+        20% {
+          transform: translateX(-6px);
+        }
+        40% {
+          transform: translateX(6px);
+        }
+        60% {
+          transform: translateX(-4px);
+        }
+        80% {
+          transform: translateX(4px);
+        }
+        100% {
+          transform: translateX(0);
+        }
+      }
+
+      /* Accessibility helper */
+      .sr-only {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
+        border: 0 !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Three.js background canvas -->
+    <canvas id="bg3d" aria-hidden="true"></canvas>
+
+    <div class="ui">
+      <div class="wrap">
+        <header class="header">
+          <div class="brand">
+            <h1>Reaction Timer</h1>
+            <p>Precision timing + clean state machine + performant Three.js backdrop.</p>
+          </div>
+          <div class="hint">Keyboard: <strong>Space</strong> / <strong>Enter</strong></div>
+        </header>
+
+        <section class="card grid" aria-label="Reaction Timer Game">
+          <!-- Game panel -->
+          <div class="game">
+            <div class="statePillRow">
+              <div class="pill" id="statePill" data-variant="neutral">
+                <span class="dot" aria-hidden="true"></span>
+                <span>State: <strong id="stateLabel">idle</strong></span>
+              </div>
+
+              <div class="actions">
+                <button class="btn" id="btnResetSession" type="button" title="Reset session stats">
+                  Reset session
+                </button>
+                <button class="btn danger" id="btnClearBest" type="button" title="Clear best time from storage">
+                  Clear best
+                </button>
+              </div>
+            </div>
+
+            <div class="arena" id="arena" data-state="idle">
+              <button
+                class="arenaButton"
+                id="arenaButton"
+                type="button"
+                data-state="idle"
+                aria-describedby="helpText"
+              >
+                <div class="arenaInner">
+                  <h2 class="headline" id="headline">Click to start</h2>
+                  <p class="sub" id="helpText">
+                    When you start, wait for green. Click (or press Space/Enter) as fast as you can.
+                  </p>
+                  <p class="big" id="big" aria-label="Reaction time readout">—</p>
+                </div>
+              </button>
+            </div>
+
+            <div class="metaRow" aria-label="Summary statistics">
+              <div class="statCard">
+                <div class="k">Best (persisted)</div>
+                <div class="v" id="bestValue">—</div>
+              </div>
+              <div class="statCard">
+                <div class="k">Average (session)</div>
+                <div class="v" id="avgValue">—</div>
+              </div>
+            </div>
+
+            <!-- ARIA live region for announcements -->
+            <div class="sr-only" aria-live="polite" aria-atomic="true" id="live"></div>
+          </div>
+
+          <!-- Sidebar panel -->
+          <aside class="sidebar" aria-label="Attempts and details">
+            <h2>Attempts</h2>
+
+            <div class="attempts">
+              <div class="attemptsHeader">
+                <div class="muted">Last 10 (most recent first)</div>
+                <div class="muted" id="sessionCount">Session: 0</div>
+              </div>
+
+              <div class="attemptsGrid" id="attemptsGrid" aria-label="Last 10 attempts grid">
+                <!-- JS fills 10 chips -->
+              </div>
+            </div>
+
+            <ul class="list" aria-label="Current result details">
+              <li>
+                <span class="label">Current</span>
+                <span class="value" id="currentValue">—</span>
+              </li>
+              <li>
+                <span class="label">Last</span>
+                <span class="value" id="lastValue">—</span>
+              </li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="card devnotes" aria-label="Developer Notes">
+          <h3>Developer Notes</h3>
+          <ul>
+            <li>
+              <strong>Why <code>performance.now()</code>:</strong> it provides a high-resolution, monotonic timer suitable for
+              precise reaction measurements, unaffected by system clock adjustments.
+            </li>
+            <li>
+              <strong>State machine:</strong> the game uses an explicit finite state machine
+              (<code>idle</code> → <code>waiting</code> → <code>ready</code> → <code>result</code> with
+              <code>too_early</code> on premature input) to prevent race conditions and double-trigger bugs.
+            </li>
+            <li>
+              <strong>Three.js separation:</strong> WebGL runs in a dedicated module that reacts to state changes, but never
+              reads/writes timing values. Timing is measured strictly in the game module.
+            </li>
+            <li>
+              <strong>Future enhancements:</strong> percentile stats, per-device calibration, downloadable history, and an
+              optional “pro mode” with stricter false-start penalties.
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+
+    <!-- Three.js via CDN -->
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+    <script>
+      (() => {
+        "use strict";
+
+        /** ---------------------------------------------------------------------
+         * Constants / Utilities
+         * ------------------------------------------------------------------- */
+        const STATES = Object.freeze({
+          IDLE: "idle",
+          WAITING: "waiting",
+          READY: "ready",
+          TOO_EARLY: "too_early",
+          RESULT: "result",
+        });
+
+        const STORAGE_KEY_BEST = "rtg_best_ms_v1";
+
+        const clampInt = (n, min, max) => Math.max(min, Math.min(max, n | 0));
+
+        const now = () => performance.now();
+
+        const formatMs = (ms) => {
+          if (!Number.isFinite(ms)) return "—";
+          const v = Math.max(0, ms);
+          // Show integer milliseconds; keep it crisp.
+          return `${Math.round(v)} ms`;
+        };
+
+        const avg = (arr) => {
+          if (!arr.length) return NaN;
+          let s = 0;
+          for (let i = 0; i < arr.length; i++) s += arr[i];
+          return s / arr.length;
+        };
+
+        /** ---------------------------------------------------------------------
+         * Storage (best time persisted)
+         * ------------------------------------------------------------------- */
+        const Storage = (() => {
+          const readBest = () => {
+            try {
+              const raw = localStorage.getItem(STORAGE_KEY_BEST);
+              if (!raw) return NaN;
+              const n = Number(raw);
+              return Number.isFinite(n) && n > 0 ? n : NaN;
+            } catch {
+              return NaN;
+            }
+          };
+
+          const writeBest = (ms) => {
+            try {
+              if (Number.isFinite(ms) && ms > 0) localStorage.setItem(STORAGE_KEY_BEST, String(Math.round(ms)));
+            } catch {
+              /* ignore */
+            }
+          };
+
+          const clearBest = () => {
+            try {
+              localStorage.removeItem(STORAGE_KEY_BEST);
+            } catch {
+              /* ignore */
+            }
+          };
+
+          return Object.freeze({ readBest, writeBest, clearBest });
+        })();
+
+        /** ---------------------------------------------------------------------
+         * Stats (session-only)
+         * ------------------------------------------------------------------- */
+        const Stats = (() => {
+          /** @type {number[]} */
+          let attempts = [];
+
+          const addAttempt = (ms) => {
+            if (!Number.isFinite(ms) || ms <= 0) return;
+            attempts.unshift(ms);
+            if (attempts.length > 10) attempts = attempts.slice(0, 10);
+          };
+
+          const resetSession = () => {
+            attempts = [];
+          };
+
+          const getAttempts = () => attempts.slice();
+
+          const getAverage = () => avg(attempts);
+
+          const getLast = () => (attempts.length ? attempts[0] : NaN);
+
+          const getCount = () => attempts.length;
+
+          return Object.freeze({
+            addAttempt,
+            resetSession,
+            getAttempts,
+            getAverage,
+            getLast,
+            getCount,
+          });
+        })();
+
+        /** ---------------------------------------------------------------------
+         * UI Module
+         * ------------------------------------------------------------------- */
+        const UI = (() => {
+          const el = {
+            arena: document.getElementById("arena"),
+            arenaButton: document.getElementById("arenaButton"),
+            headline: document.getElementById("headline"),
+            helpText: document.getElementById("helpText"),
+            big: document.getElementById("big"),
+            stateLabel: document.getElementById("stateLabel"),
+            statePill: document.getElementById("statePill"),
+            bestValue: document.getElementById("bestValue"),
+            avgValue: document.getElementById("avgValue"),
+            currentValue: document.getElementById("currentValue"),
+            lastValue: document.getElementById("lastValue"),
+            attemptsGrid: document.getElementById("attemptsGrid"),
+            sessionCount: document.getElementById("sessionCount"),
+            live: document.getElementById("live"),
+            btnResetSession: document.getElementById("btnResetSession"),
+            btnClearBest: document.getElementById("btnClearBest"),
+          };
+
+          const announce = (msg) => {
+            // Make announcements reliable: clear then set on next frame.
+            el.live.textContent = "";
+            requestAnimationFrame(() => {
+              el.live.textContent = msg;
+            });
+          };
+
+          const setStatePill = (state) => {
+            el.stateLabel.textContent = state;
+
+            let variant = "neutral";
+            if (state === STATES.READY) variant = "ready";
+            if (state === STATES.TOO_EARLY) variant = "error";
+
+            el.statePill.dataset.variant = variant;
+          };
+
+          const setArenaState = (state) => {
+            el.arena.dataset.state = state;
+            el.arenaButton.dataset.state = state;
+          };
+
+          const setPrimaryReadout = (text, tone /* "accent" | "error" | null */) => {
+            el.big.textContent = text;
+            if (tone === "accent") el.big.dataset.tone = "accent";
+            else if (tone === "error") el.big.dataset.tone = "error";
+            else el.big.removeAttribute("data-tone");
+          };
+
+          const renderAttempts = (attempts) => {
+            // Always render exactly 10 chips for consistent layout.
+            el.attemptsGrid.innerHTML = "";
+            for (let i = 0; i < 10; i++) {
+              const chip = document.createElement("div");
+              chip.className = "chip";
+              if (i >= attempts.length) {
+                chip.classList.add("empty");
+                chip.textContent = "—";
+                chip.setAttribute("aria-label", "Empty attempt slot");
+              } else {
+                chip.textContent = `${Math.round(attempts[i])}`;
+                chip.setAttribute("aria-label", `Attempt ${i + 1}: ${formatMs(attempts[i])}`);
+              }
+              el.attemptsGrid.appendChild(chip);
+            }
+          };
+
+          const renderStats = ({ currentMs, bestMs, avgMs, lastMs, sessionCount }) => {
+            el.bestValue.textContent = formatMs(bestMs);
+            el.avgValue.textContent = formatMs(avgMs);
+            el.currentValue.textContent = formatMs(currentMs);
+            el.lastValue.textContent = formatMs(lastMs);
+            el.sessionCount.textContent = `Session: ${sessionCount}`;
+          };
+
+          const renderStateView = (state, data = {}) => {
+            setStatePill(state);
+            setArenaState(state);
+
+            // Default copy
+            let headline = "Click to start";
+            let help = "When you start, wait for green. Click (or press Space/Enter) as fast as you can.";
+            let bigText = "—";
+            let tone = null;
+
+            if (state === STATES.IDLE) {
+              headline = "Click to start";
+              help = "You will get a random delay. React when the panel turns green.";
+              bigText = "—";
+              tone = null;
+            } else if (state === STATES.WAITING) {
+              headline = "Wait for green…";
+              help = "Don’t click yet. Premature input triggers a false start.";
+              bigText = "…";
+              tone = null;
+            } else if (state === STATES.READY) {
+              headline = "GO!";
+              help = "Click now!";
+              bigText = "NOW";
+              tone = "accent";
+            } else if (state === STATES.TOO_EARLY) {
+              headline = "False start";
+              help = "You clicked too early. Click to try again.";
+              bigText = "Too early";
+              tone = "error";
+            } else if (state === STATES.RESULT) {
+              headline = "Reaction time";
+              help = "Click to play again.";
+              bigText = formatMs(data.currentMs);
+              tone = "accent";
+            }
+
+            el.headline.textContent = headline;
+            el.helpText.textContent = help;
+            setPrimaryReadout(bigText, tone);
+
+            // Keep ARIA announcements succinct and meaningful
+            if (state === STATES.READY) announce("Go!");
+            if (state === STATES.TOO_EARLY) announce("False start. You clicked too early.");
+            if (state === STATES.RESULT && Number.isFinite(data.currentMs))
+              announce(`Reaction time ${Math.round(data.currentMs)} milliseconds.`);
+          };
+
+          return Object.freeze({
+            el,
+            renderStateView,
+            renderAttempts,
+            renderStats,
+            announce,
+          });
+        })();
+
+        /** ---------------------------------------------------------------------
+         * Three.js Visuals (architecturally isolated from timing logic)
+         * - Reacts to state changes via a small "setMode" API
+         * - Never reads/writes timing values
+         * ------------------------------------------------------------------- */
+        const Visuals3D = (() => {
+          const canvas = document.getElementById("bg3d");
+
+          /** @type {THREE.WebGLRenderer | null} */
+          let renderer = null;
+          /** @type {THREE.Scene | null} */
+          let scene = null;
+          /** @type {THREE.PerspectiveCamera | null} */
+          let camera = null;
+
+          /** @type {{group: THREE.Group, core: THREE.Mesh, ring: THREE.Mesh, spikes: THREE.Mesh} | null} */
+          let objects = null;
+
+          let rafId = 0;
+
+          // Animation parameters controlled by state
+          const anim = {
+            targetSpeed: 0.25,
+            speed: 0.25,
+            targetGlow: 0.0,
+            glow: 0.0,
+            targetErrorPulse: 0.0,
+            errorPulse: 0.0,
+          };
+
+          // Colors (match UI tokens)
+          const COLORS = {
+            bg: 0x0f172a,
+            surface: 0x1e293b,
+            accent: 0x22c55e,
+            error: 0xef4444,
+            text: 0xf8fafc,
+            muted: 0x94a3b8,
+          };
+
+          const prefersReducedMotion = () =>
+            window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+          const lerp = (a, b, t) => a + (b - a) * t;
+
+          const init = () => {
+            // Defensive: avoid initializing if WebGL is unavailable
+            if (!window.THREE) return;
+
+            renderer = new THREE.WebGLRenderer({
+              canvas,
+              antialias: true,
+              alpha: true,
+              powerPreference: "high-performance",
+            });
+
+            // Keep pixel ratio reasonable for perf; clamp to 2.
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+            camera.position.set(0, 0.2, 4.2);
+
+            // Lighting: simple and cheap
+            const amb = new THREE.AmbientLight(0xffffff, 0.55);
+            scene.add(amb);
+
+            const dir = new THREE.DirectionalLight(0xffffff, 0.75);
+            dir.position.set(3, 4, 3);
+            scene.add(dir);
+
+            // Geometry: simple, performant, no textures
+            const group = new THREE.Group();
+            scene.add(group);
+
+            const matCore = new THREE.MeshStandardMaterial({
+              color: COLORS.surface,
+              roughness: 0.25,
+              metalness: 0.45,
+              emissive: new THREE.Color(0x000000),
+              emissiveIntensity: 1.0,
+            });
+
+            const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.85, 0), matCore);
+            group.add(core);
+
+            const matRing = new THREE.MeshStandardMaterial({
+              color: COLORS.muted,
+              roughness: 0.35,
+              metalness: 0.35,
+              transparent: true,
+              opacity: 0.55,
+              emissive: new THREE.Color(0x000000),
+              emissiveIntensity: 1.0,
+            });
+
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.09, 12, 64), matRing);
+            ring.rotation.x = Math.PI * 0.55;
+            group.add(ring);
+
+            const matSpikes = new THREE.MeshStandardMaterial({
+              color: COLORS.surface,
+              roughness: 0.4,
+              metalness: 0.25,
+              transparent: true,
+              opacity: 0.6,
+              emissive: new THREE.Color(0x000000),
+              emissiveIntensity: 1.0,
+            });
+
+            const spikes = new THREE.Mesh(new THREE.OctahedronGeometry(1.35, 0), matSpikes);
+            spikes.scale.set(1, 0.95, 1);
+            group.add(spikes);
+
+            objects = { group, core, ring, spikes };
+
+            // Initial sizing
+            resize();
+
+            // Start loop
+            loop();
+          };
+
+          const resize = () => {
+            if (!renderer || !camera) return;
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            renderer.setSize(w, h, false);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+          };
+
+          const setMode = (state) => {
+            // Reduced motion: keep subtle changes and slower speed
+            const reduced = prefersReducedMotion();
+
+            if (state === STATES.WAITING) {
+              anim.targetSpeed = reduced ? 0.12 : 0.22;
+              anim.targetGlow = 0.05;
+              anim.targetErrorPulse = 0.0;
+            } else if (state === STATES.READY) {
+              anim.targetSpeed = reduced ? 0.18 : 0.55;
+              anim.targetGlow = 0.9;
+              anim.targetErrorPulse = 0.0;
+            } else if (state === STATES.TOO_EARLY) {
+              anim.targetSpeed = reduced ? 0.2 : 0.42;
+              anim.targetGlow = 0.25;
+              anim.targetErrorPulse = 1.0; // triggers a brief red pulse
+            } else if (state === STATES.RESULT) {
+              anim.targetSpeed = reduced ? 0.1 : 0.16;
+              anim.targetGlow = 0.18;
+              anim.targetErrorPulse = 0.0;
+            } else {
+              // IDLE
+              anim.targetSpeed = reduced ? 0.08 : 0.12;
+              anim.targetGlow = 0.05;
+              anim.targetErrorPulse = 0.0;
+            }
+          };
+
+          const loop = () => {
+            rafId = requestAnimationFrame(loop);
+            if (!renderer || !scene || !camera || !objects) return;
+
+            // Smoothly approach targets (stable, no large jumps)
+            anim.speed = lerp(anim.speed, anim.targetSpeed, 0.06);
+            anim.glow = lerp(anim.glow, anim.targetGlow, 0.08);
+
+            // Error pulse decays quickly after being triggered
+            anim.errorPulse = lerp(anim.errorPulse, anim.targetErrorPulse, 0.22);
+            anim.targetErrorPulse = lerp(anim.targetErrorPulse, 0.0, 0.14);
+
+            const t = performance.now() * 0.001;
+
+            // Motion
+            objects.group.rotation.y += 0.006 * anim.speed;
+            objects.group.rotation.x = Math.sin(t * 0.55) * 0.08;
+
+            objects.ring.rotation.z += 0.01 * anim.speed;
+            objects.core.rotation.y += 0.014 * anim.speed;
+            objects.spikes.rotation.x -= 0.012 * anim.speed;
+
+            // Subtle pulsing scale (waiting/ready feel)
+            const pulse = 1.0 + Math.sin(t * (1.6 + anim.speed)) * 0.02;
+            objects.core.scale.setScalar(pulse);
+
+            // Emissive/glow by state (accent)
+            const accent = new THREE.Color(COLORS.accent);
+            const base = new THREE.Color(0x000000);
+
+            const coreMat = objects.core.material;
+            const ringMat = objects.ring.material;
+            const spikesMat = objects.spikes.material;
+
+            // Red flash influence for too_early
+            const err = new THREE.Color(COLORS.error);
+
+            // Mix emissive colors (accent glow + brief error pulse)
+            const emissiveCore = base.clone().lerp(accent, anim.glow);
+            const emissiveRing = base.clone().lerp(accent, anim.glow * 0.75);
+            const emissiveSpikes = base.clone().lerp(accent, anim.glow * 0.35);
+
+            if (anim.errorPulse > 0.001) {
+              emissiveCore.lerp(err, anim.errorPulse);
+              emissiveRing.lerp(err, anim.errorPulse * 0.9);
+              emissiveSpikes.lerp(err, anim.errorPulse * 0.7);
+
+              // tiny "shake" effect that stays in visuals layer only
+              objects.group.position.x = Math.sin(t * 60) * 0.03 * anim.errorPulse;
+              objects.group.position.y = Math.cos(t * 58) * 0.02 * anim.errorPulse;
+            } else {
+              objects.group.position.x = 0;
+              objects.group.position.y = 0;
+            }
+
+            coreMat.emissive.copy(emissiveCore);
+            ringMat.emissive.copy(emissiveRing);
+            spikesMat.emissive.copy(emissiveSpikes);
+
+            // Slight opacity breathing for ring/spikes (cheap)
+            ringMat.opacity = 0.46 + anim.glow * 0.22;
+            spikesMat.opacity = 0.5 + anim.glow * 0.12;
+
+            renderer.render(scene, camera);
+          };
+
+          const destroy = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = 0;
+            // Minimal cleanup. In a single-page static file, this is enough.
+            renderer = null;
+            scene = null;
+            camera = null;
+            objects = null;
+          };
+
+          return Object.freeze({
+            init,
+            resize,
+            setMode,
+            destroy,
+          });
+        })();
+
+        /** ---------------------------------------------------------------------
+         * Game FSM (timing precision + race-condition defense)
+         * ------------------------------------------------------------------- */
+        const Game = (() => {
+          let state = STATES.IDLE;
+
+          // Timing: only performance.now(), no Date.now.
+          let waitTimerId = 0;
+          let readyAt = 0;
+
+          // Anti double-trigger:
+          // - guard transitions
+          // - ignore input if state doesn't allow it
+          // - always clear pending timers when leaving WAITING
+          const canInput = (s) => s === STATES.IDLE || s === STATES.WAITING || s === STATES.READY || s === STATES.RESULT || s === STATES.TOO_EARLY;
+
+          const clearWaitTimer = () => {
+            if (waitTimerId) {
+              clearTimeout(waitTimerId);
+              waitTimerId = 0;
+            }
+          };
+
+          const setState = (next, payload = {}) => {
+            if (state === next) return;
+            state = next;
+
+            // Update UI + visuals (no timing logic in visuals)
+            UI.renderStateView(state, payload);
+            Visuals3D.setMode(state);
+
+            // Keep button label semantics stable (optional)
+            UI.el.arenaButton.setAttribute("aria-label", `Game area. State ${state}. Press to interact.`);
+          };
+
+          const scheduleReady = () => {
+            // Random delay between 1000 and 5000 ms
+            const delay = clampInt(1000 + Math.random() * 4000, 1000, 5000);
+
+            clearWaitTimer();
+
+            // Use setTimeout only to schedule the moment we *set* readyAt.
+            waitTimerId = setTimeout(() => {
+              waitTimerId = 0;
+              // Transition only if still waiting (defensive against race)
+              if (state !== STATES.WAITING) return;
+
+              readyAt = now(); // exact moment ready begins
+              setState(STATES.READY);
+            }, delay);
+          };
+
+          const startRound = () => {
+            // Only allow starting from IDLE / RESULT / TOO_EARLY
+            if (state !== STATES.IDLE && state !== STATES.RESULT && state !== STATES.TOO_EARLY) return;
+
+            readyAt = 0;
+            setState(STATES.WAITING);
+            scheduleReady();
+          };
+
+          const falseStart = () => {
+            // Premature input only valid in WAITING
+            if (state !== STATES.WAITING) return;
+
+            clearWaitTimer();
+            readyAt = 0;
+            setState(STATES.TOO_EARLY);
+          };
+
+          const stopOnReady = () => {
+            if (state !== STATES.READY) return;
+
+            const clickedAt = now();
+            const reactionMs = clickedAt - readyAt;
+
+            // Defensive: ignore pathological results (shouldn't happen, but safety)
+            if (!Number.isFinite(reactionMs) || reactionMs <= 0 || reactionMs > 60000) {
+              setState(STATES.IDLE);
+              UI.announce("Invalid timing sample. Try again.");
+              return;
+            }
+
+            // Update session stats
+            Stats.addAttempt(reactionMs);
+
+            // Persist best
+            const best = Storage.readBest();
+            if (!Number.isFinite(best) || reactionMs < best) Storage.writeBest(reactionMs);
+
+            // Render stats + attempts
+            const bestMs = Storage.readBest();
+            const attempts = Stats.getAttempts();
+            const avgMs = Stats.getAverage();
+            const lastMs = Stats.getLast();
+
+            UI.renderAttempts(attempts);
+            UI.renderStats({
+              currentMs: reactionMs,
+              bestMs,
+              avgMs,
+              lastMs,
+              sessionCount: Stats.getCount(),
+            });
+
+            setState(STATES.RESULT, { currentMs: reactionMs });
+          };
+
+          const onPrimaryInput = () => {
+            if (!canInput(state)) return;
+
+            // Main interaction rules
+            if (state === STATES.IDLE || state === STATES.RESULT || state === STATES.TOO_EARLY) {
+              startRound();
+              return;
+            }
+            if (state === STATES.WAITING) {
+              falseStart();
+              return;
+            }
+            if (state === STATES.READY) {
+              stopOnReady();
+              return;
+            }
+          };
+
+          const resetSession = () => {
+            // Reset session attempts only (not best)
+            Stats.resetSession();
+
+            UI.renderAttempts(Stats.getAttempts());
+            UI.renderStats({
+              currentMs: NaN,
+              bestMs: Storage.readBest(),
+              avgMs: Stats.getAverage(),
+              lastMs: Stats.getLast(),
+              sessionCount: Stats.getCount(),
+            });
+
+            setState(STATES.IDLE);
+            UI.announce("Session stats reset.");
+          };
+
+          const clearBest = () => {
+            Storage.clearBest();
+            UI.renderStats({
+              currentMs: NaN,
+              bestMs: Storage.readBest(),
+              avgMs: Stats.getAverage(),
+              lastMs: Stats.getLast(),
+              sessionCount: Stats.getCount(),
+            });
+            UI.announce("Best time cleared.");
+          };
+
+          const init = () => {
+            // Initial renders
+            UI.renderAttempts(Stats.getAttempts());
+            UI.renderStats({
+              currentMs: NaN,
+              bestMs: Storage.readBest(),
+              avgMs: Stats.getAverage(),
+              lastMs: Stats.getLast(),
+              sessionCount: Stats.getCount(),
+            });
+            UI.renderStateView(STATES.IDLE);
+            Visuals3D.setMode(STATES.IDLE);
+
+            // Click/touch on arena
+            UI.el.arenaButton.addEventListener("click", (e) => {
+              e.preventDefault();
+              onPrimaryInput();
+            });
+
+            // Keyboard support (Space / Enter). Use keydown; prevent scrolling on Space.
+            window.addEventListener(
+              "keydown",
+              (e) => {
+                if (e.code === "Space" || e.code === "Enter") {
+                  // Avoid repeating due to key repeat (defensive)
+                  if (e.repeat) return;
+                  e.preventDefault();
+                  onPrimaryInput();
+                }
+              },
+              { passive: false }
+            );
+
+            // Buttons
+            UI.el.btnResetSession.addEventListener("click", (e) => {
+              e.preventDefault();
+              resetSession();
+            });
+
+            UI.el.btnClearBest.addEventListener("click", (e) => {
+              e.preventDefault();
+              clearBest();
+            });
+
+            // Safety: clear timers on page hide
+            document.addEventListener("visibilitychange", () => {
+              if (document.hidden) {
+                clearWaitTimer();
+                // Returning to idle avoids "ready" happening in background.
+                if (state === STATES.WAITING || state === STATES.READY) {
+                  setState(STATES.IDLE);
+                  UI.announce("Paused. Click to start again.");
+                }
+              }
+            });
+          };
+
+          return Object.freeze({
+            init,
+            onPrimaryInput,
+            resetSession,
+            clearBest,
+          });
+        })();
+
+        /** ---------------------------------------------------------------------
+         * Boot
+         * ------------------------------------------------------------------- */
+        const boot = () => {
+          // Initialize visuals first; if it fails, game still works.
+          try {
+            Visuals3D.init();
+          } catch {
+            /* visuals are optional */
+          }
+
+          // Handle resize efficiently
+          let resizeRaf = 0;
+          window.addEventListener("resize", () => {
+            if (resizeRaf) cancelAnimationFrame(resizeRaf);
+            resizeRaf = requestAnimationFrame(() => {
+              resizeRaf = 0;
+              Visuals3D.resize();
+            });
+          });
+
+          Game.init();
+        };
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", boot, { once: true });
+        } else {
+          boot();
+        }
+      })();
+    </script>
+  </body>
+</html>
